@@ -25,6 +25,7 @@ textarea{width:100%;height:120px;box-sizing:border-box}
   청크 크기: <input type="range" id="maxBytes" min="600" max="1200" step="200" value="1200" oninput="document.getElementById('maxVal').textContent=this.value" style="vertical-align:middle"> <span id="maxVal">1200</span> bytes
 </div>
 <div id="warn"></div>
+<div id="genProg" style="display:none;padding:6px 0;font-size:.9em;color:#555"></div>
 <div id="view">
   <div id="stat"></div>
   <img id="qimg" alt="">
@@ -53,7 +54,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 //# sourceMappingURL=/sm/26b4b0d0b1e283d6b3ec9857ac597d7a60c76ac17be1ef4c965f03086de426bb.map
 </script>
 <script>
-var chunks=[],imgs=[],idx=0,autoTimer=null;
+var chunks=[],imgs=[],idx=0,autoTimer=null,genId=0;
 document.getElementById('f').onchange=function(e){
   var file=e.target.files[0];
   if(!file)return;
@@ -97,15 +98,26 @@ function build(data,mode,filename){
   idx=0;
   stopAuto();
   imgs=[];
+  var progEl=document.getElementById('genProg');
+  var viewEl=document.getElementById('view');
+  progEl.textContent='생성 중... 0 / '+chunks.length;
+  progEl.style.display='block';
+  viewEl.style.display='none';
+  var myId=++genId,j=0;
   qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
-  for(var j=0;j<chunks.length;j++){
-    var q=qrcode(0,'L');
-    try{q.addData(chunks[j],'Byte');q.make();}
-    catch(e){alert('QR 생성 실패 ('+(j+1)+'번 청크)');return;}
-    imgs.push(q.createDataURL(4,16));
-  }
-  document.getElementById('view').style.display='block';
-  show();
+  (function step(){
+    if(genId!==myId)return;
+    var end=Math.min(j+10,chunks.length);
+    for(;j<end;j++){
+      var q=qrcode(0,'L');
+      try{q.addData(chunks[j],'Byte');q.make();}
+      catch(e){alert('QR 생성 실패 ('+(j+1)+'번 청크)');progEl.style.display='none';return;}
+      imgs.push(q.createDataURL(4,16));
+    }
+    progEl.textContent='생성 중... '+j+' / '+chunks.length;
+    if(j<chunks.length){setTimeout(step,0);}
+    else{progEl.style.display='none';viewEl.style.display='block';show();}
+  })();
 }
 function show(){
   document.getElementById('qimg').src=imgs[idx];
