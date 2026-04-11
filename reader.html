@@ -40,6 +40,10 @@ button.secondary{background:#757575}
   <div id="status">QR코드를 카메라에 비춰주세요...</div>
   <div id="progress"></div>
   <div id="output"></div>
+  <div style="font-size:.85em;color:#444;margin:8px 0">
+    FPS: <input type="range" id="fpsSlider" min="1" max="30" step="1" value="10" oninput="document.getElementById('fpsVal').textContent=this.value" style="vertical-align:middle"> <span id="fpsVal">10</span>
+    &nbsp; 스캔 크기: <input type="range" id="scanW" min="320" max="1280" step="160" value="1280" oninput="document.getElementById('scanWVal').textContent=this.value" style="vertical-align:middle"> <span id="scanWVal">1280</span>px
+  </div>
   <div id="reset-wrap">
     <button id="resetBtn" class="secondary">초기화 / 다시 스캔</button>
   </div>
@@ -97,12 +101,15 @@ button.secondary{background:#757575}
     requestAnimationFrame(tick);
     if(!scanning)return;
     var now=Date.now();
-    if(now-lastScan<100)return;
+    var fps=+(document.getElementById('fpsSlider').value)||10;
+    if(now-lastScan<1000/fps)return;
     lastScan=now;
     if(video.readyState!==video.HAVE_ENOUGH_DATA)return;
-    canvas.width=video.videoWidth;
-    canvas.height=video.videoHeight;
-    ctx.drawImage(video,0,0);
+    var maxW=+(document.getElementById('scanW').value)||1280;
+    var scale=Math.min(1,maxW/video.videoWidth);
+    canvas.width=Math.round(video.videoWidth*scale);
+    canvas.height=Math.round(video.videoHeight*scale);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
     var img=ctx.getImageData(0,0,canvas.width,canvas.height);
     var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
     if(code)handleCode(code.data);

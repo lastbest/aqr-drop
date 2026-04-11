@@ -53,7 +53,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 //# sourceMappingURL=/sm/26b4b0d0b1e283d6b3ec9857ac597d7a60c76ac17be1ef4c965f03086de426bb.map
 </script>
 <script>
-var chunks=[],idx=0,autoTimer=null;
+var chunks=[],imgs=[],idx=0,autoTimer=null;
 document.getElementById('f').onchange=function(e){
   var file=e.target.files[0];
   if(!file)return;
@@ -96,16 +96,20 @@ function build(data,mode,filename){
   });
   idx=0;
   stopAuto();
+  imgs=[];
+  qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
+  for(var j=0;j<chunks.length;j++){
+    var q=qrcode(0,'L');
+    try{q.addData(chunks[j],'Byte');q.make();}
+    catch(e){alert('QR 생성 실패 ('+(j+1)+'번 청크)');return;}
+    imgs.push(q.createDataURL(4,16));
+  }
   document.getElementById('view').style.display='block';
   show();
 }
 function show(){
-  qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
-  var q=qrcode(0,'L');
-  try{q.addData(chunks[idx],'Byte');q.make();}
-  catch(e){alert('QR 생성 실패: 청크가 너무 큽니다.');return;}
-  document.getElementById('qimg').src=q.createDataURL(4,16);
-  document.getElementById('stat').textContent=(idx+1)+' / '+chunks.length;
+  document.getElementById('qimg').src=imgs[idx];
+  document.getElementById('stat').textContent=(idx+1)+' / '+imgs.length;
 }
 function nav(d){
   stopAuto();
