@@ -31,6 +31,10 @@ textarea{width:100%;height:120px;box-sizing:border-box}
   <div style="margin-top:8px">
     <button class="btn" onclick="nav(-1)">&#9664;</button>
     <button class="btn" onclick="nav(1)">&#9654;</button>
+    <button class="btn" id="autoBtn" onclick="toggleAuto()" style="margin-left:8px">&#9654;&#9654; 자동</button>
+  </div>
+  <div style="font-size:.85em;margin:4px 0;color:#444">
+    간격: <input type="range" id="autoMs" min="100" max="3000" step="100" value="1000" oninput="document.getElementById('autoSec').textContent=(this.value/1000).toFixed(1)" style="vertical-align:middle"> <span id="autoSec">1.0</span>초
   </div>
   <div style="font-size:.8em;color:#666;margin-top:4px">Space / &#8592; &#8594; 키로 이동</div>
 </div>
@@ -45,7 +49,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 //# sourceMappingURL=/sm/26b4b0d0b1e283d6b3ec9857ac597d7a60c76ac17be1ef4c965f03086de426bb.map
 </script>
 <script>
-var chunks=[],idx=0;
+var chunks=[],idx=0,autoTimer=null;
 document.getElementById('f').onchange=function(e){
   var file=e.target.files[0];
   if(!file)return;
@@ -87,6 +91,7 @@ function build(data,mode,filename){
     return 'QR:'+(i+1)+'/'+total+':'+mode+':'+p;
   });
   idx=0;
+  stopAuto();
   document.getElementById('view').style.display='block';
   show();
 }
@@ -99,8 +104,26 @@ function show(){
   document.getElementById('stat').textContent=(idx+1)+' / '+chunks.length;
 }
 function nav(d){
+  stopAuto();
   idx=Math.max(0,Math.min(chunks.length-1,idx+d));
   show();
+}
+function toggleAuto(){
+  if(autoTimer)stopAuto();else startAuto();
+}
+function startAuto(){
+  stopAuto();
+  var ms=+(document.getElementById('autoMs').value)||1000;
+  autoTimer=setInterval(function(){
+    if(idx<chunks.length-1){idx++;show();}
+    else stopAuto();
+  },ms);
+  document.getElementById('autoBtn').textContent='⏹ 정지';
+}
+function stopAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  var btn=document.getElementById('autoBtn');
+  if(btn)btn.textContent='\u25BA\u25BA 자동';
 }
 document.addEventListener('keydown',function(e){
   if(e.code==='ArrowRight'||e.code==='Space'){e.preventDefault();nav(1);}
