@@ -93,6 +93,7 @@ function build(data,mode){
   show();
 }
 function show(){
+  qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
   var q=qrcode(0,'L');
   try{q.addData(chunks[idx],'Byte');q.make();}
   catch(e){alert('QR 생성 실패: 청크가 너무 큽니다.');return;}
