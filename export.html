@@ -23,6 +23,7 @@ textarea{width:100%;height:120px;box-sizing:border-box}
 </div>
 <div style="font-size:.85em;margin:4px 0;color:#444">
   청크 크기: <input type="range" id="maxBytes" min="600" max="1200" step="200" value="1200" oninput="document.getElementById('maxVal').textContent=this.value" style="vertical-align:middle"> <span id="maxVal">1200</span> bytes
+  &nbsp;&nbsp; 중복 송출: <label><input type="checkbox" id="passChk" onchange="document.getElementById('passN').disabled=!this.checked"> <input type="number" id="passN" min="2" max="5" value="2" disabled style="width:2.5em;text-align:center;vertical-align:middle"> 패스</label>
 </div>
 <div id="warn"></div>
 <div id="genProg" style="display:none;padding:6px 0;font-size:.9em;color:#555"></div>
@@ -93,6 +94,11 @@ function build(data,mode,filename){
   var sid=Math.random().toString(36).slice(2,6).toUpperCase();
   chunks=raw.map(function(p,i){return 'QR:'+(i+1)+'/'+total+':'+mode+':'+sid+':'+p;});
   chunks.unshift('QR:0/'+total+':M:'+sid+':'+mode+':'+(mode==='F'?filename:'-'));
+  if(document.getElementById('passChk').checked){
+    var passes=Math.max(2,+(document.getElementById('passN').value)||2);
+    var dc=chunks.slice(1);
+    for(var p=1;p<passes;p++)chunks=chunks.concat(dc);
+  }
   idx=0;
   stopAuto();
   imgs=[];
@@ -119,8 +125,12 @@ function build(data,mode,filename){
 }
 function show(){
   document.getElementById('qimg').src=imgs[idx];
-  var n=imgs.length-1;
-  document.getElementById('stat').textContent=idx===0?'메타 / '+n:idx+' / '+n;
+  var n=chunks.length-1; // total including repeated
+  var total=+(chunks[0].split('/')[1])||n; // original data chunk count from metadata
+  if(idx===0){document.getElementById('stat').textContent='메타 / '+total;return;}
+  var pass=Math.ceil(idx/total),posInPass=((idx-1)%total)+1;
+  var passLabel=chunks.length-1>total?' ('+pass+'패스)':'';
+  document.getElementById('stat').textContent=posInPass+' / '+total+passLabel;
 }
 function nav(d){
   stopAuto();
