@@ -21,6 +21,9 @@ textarea{width:100%;height:120px;box-sizing:border-box}
   <input type="file" id="f">
   <button class="btn" onclick="go()">Export</button>
 </div>
+<div style="font-size:.85em;margin:4px 0;color:#444">
+  청크 크기: <input type="range" id="maxBytes" min="600" max="1200" step="200" value="1200" oninput="document.getElementById('maxVal').textContent=this.value" style="vertical-align:middle"> <span id="maxVal">1200</span> bytes
+</div>
 <div id="warn"></div>
 <div id="view">
   <div id="stat"></div>
@@ -67,7 +70,7 @@ function go(){
   build(t,'T');
 }
 function build(data,mode,filename){
-  var MAX=1200,enc=new TextEncoder(),raw=[],pos=0;
+  var MAX=+(document.getElementById('maxBytes').value)||1200,enc=new TextEncoder(),raw=[],pos=0;
   while(pos<data.length){
     var fnExtra=(mode==='F'&&raw.length===0)?(filename.length+1):0;
     var hi=Math.min(data.length-pos,MAX),lo=1;

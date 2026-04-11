@@ -72,6 +72,14 @@ button.secondary{background:#757575}
   });
   document.getElementById('resetBtn').addEventListener('click',resetState);
 
+  function stopCamera(){
+    scanning=false;
+    if(video.srcObject){
+      video.srcObject.getTracks().forEach(function(t){t.stop();});
+      video.srcObject=null;
+    }
+  }
+
   function startCamera(){
     navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
       .then(function(stream){
@@ -144,6 +152,7 @@ button.secondary{background:#757575}
   }
 
   function assemble(){
+    stopCamera();
     var payload='';
     for(var i=1;i<=total;i++)payload+=chunks[i];
     outputEl.innerHTML='';
