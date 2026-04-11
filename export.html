@@ -75,7 +75,7 @@ function go(){
   build(t,'T');
 }
 function build(data,mode){
-  var MAX=2900,enc=new TextEncoder(),raw=[],pos=0;
+  var MAX=1200,enc=new TextEncoder(),raw=[],pos=0;
   while(pos<data.length){
     var hi=Math.min(data.length-pos,MAX),lo=1;
     if(enc.encode(data.substr(pos,hi)).length<=MAX-14){
