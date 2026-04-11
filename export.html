@@ -75,7 +75,7 @@ function go(){
   build(t,'T');
 }
 function build(data,mode){
-  var MAX=850,total=Math.max(1,Math.ceil(data.length/(MAX-12))),ok=false;
+  var MAX=500,total=Math.max(1,Math.ceil(data.length/(MAX-12))),ok=false;
   while(!ok){
     ok=true;
     var pos=0;
@@ -96,7 +96,7 @@ function show(){
   var q=qrcode(0,'L');
   try{q.addData(chunks[idx],'Byte');q.make();}
   catch(e){alert('QR 생성 실패: 청크가 너무 큽니다.');return;}
-  document.getElementById('qimg').src=q.createDataURL(4,0);
+  document.getElementById('qimg').src=q.createDataURL(4,16);
   document.getElementById('stat').textContent=(idx+1)+' / '+chunks.length;
 }
 function nav(d){
