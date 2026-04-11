@@ -41,7 +41,7 @@ textarea{width:100%;height:120px;box-sizing:border-box}
   <div style="font-size:.85em;margin:4px 0;color:#444">
     페이지 이동: <input type="number" id="goPage" min="1" placeholder="번호" style="width:4em;text-align:center" onkeydown="if(event.key==='Enter')goToPage()"> <button class="btn" onclick="goToPage()">이동</button>
   </div>
-  <div style="font-size:.8em;color:#666;margin-top:4px">Space / &#8592; &#8594; 키로 이동</div>
+  <div style="font-size:.8em;color:#666;margin-top:4px">&#8592;&#8594; 이동 &nbsp;|&nbsp; Space 자동 토글 &nbsp;|&nbsp; &#8593;&#8595; 간격 조절 &nbsp;|&nbsp; P 페이지 이동</div>
 </div>
 <script>
 /**
@@ -155,8 +155,22 @@ function goToPage(){
   document.getElementById('goPage').value='';
 }
 document.addEventListener('keydown',function(e){
-  if(e.code==='ArrowRight'||e.code==='Space'){e.preventDefault();nav(1);}
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.code==='ArrowRight'){e.preventDefault();nav(1);}
   if(e.code==='ArrowLeft'){e.preventDefault();nav(-1);}
+  if(e.code==='Space'){e.preventDefault();toggleAuto();}
+  if(e.code==='ArrowUp'||e.code==='ArrowDown'){
+    e.preventDefault();
+    var sl=document.getElementById('autoMs');
+    sl.value=Math.max(+sl.min,Math.min(+sl.max,+sl.value+(e.code==='ArrowUp'?-100:100)));
+    document.getElementById('autoSec').textContent=(sl.value/1000).toFixed(1);
+    if(autoTimer)startAuto();
+  }
+  if(e.code==='KeyP'){
+    e.preventDefault();
+    var pg=document.getElementById('goPage');
+    pg.focus();pg.select();
+  }
 });
 </script>
 </body>
