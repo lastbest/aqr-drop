@@ -64,7 +64,7 @@ button.secondary{background:#757575}
 </script>
 <script>
 (function(){
-  var total=null,mode=null,chunks={},filename=null,scanning=false,lastScan=0;
+  var total=null,mode=null,chunks={},filename=null,sid=null,scanning=false,lastScan=0;
   var video=document.getElementById('video');
   var canvas=document.getElementById('canvas');
   var ctx=canvas.getContext('2d');
@@ -120,24 +120,36 @@ button.secondary{background:#757575}
   }
 
   function handleCode(raw){
-    var m=raw.match(/^QR:(\d+)\/(\d+):([TFB])([\s\S]*)$/);
+    var m=raw.match(/^QR:(\d+)\/(\d+):([TFMB])([\s\S]*)$/);
     if(!m)return;
-    var idx=parseInt(m[1]),tot=parseInt(m[2]),md=m[3],data=m[4];
-    // strip leading colon if present
-    if(data.charAt(0)===':')data=data.slice(1);
-    // extract filename from chunk 1 of F mode
-    if(md==='F'&&idx===1){
-      var sep=data.indexOf(':');
-      if(sep!==-1){filename=data.slice(0,sep);data=data.slice(sep+1);}
+    var chunkIdx=parseInt(m[1]),tot=parseInt(m[2]),md=m[3],rest=m[4];
+    if(rest.charAt(0)===':')rest=rest.slice(1);
+    // split sid from payload (sid is always 4 alphanum chars, no colon)
+    var sp=rest.indexOf(':');
+    var chunkSid=sp!==-1?rest.slice(0,sp):rest;
+    var payload=sp!==-1?rest.slice(sp+1):'';
+
+    if(md==='M'){
+      // metadata chunk: payload = "{mode}:{filename_or_dash}"
+      if(sid!==null&&chunkSid!==sid)return;
+      if(total===null){
+        var ms=payload.indexOf(':');
+        var metaMode=ms!==-1?payload.slice(0,ms):payload;
+        var metaFn=ms!==-1?payload.slice(ms+1):'-';
+        sid=chunkSid;total=tot;mode=metaMode;
+        if(metaFn!=='-')filename=metaFn;
+        initGrid(tot);
+      }
+      return;
     }
 
-    if(total===null){
-      total=tot;mode=md;
-      initGrid(tot);
-    }
-    if(chunks[idx]!==undefined)return;
-    chunks[idx]=data;
-    markChunk(idx);
+    // data chunk
+    if(sid!==null&&chunkSid!==sid)return;
+    if(sid===null)sid=chunkSid;
+    if(total===null){total=tot;mode=md;initGrid(tot);}
+    if(chunks[chunkIdx]!==undefined)return;
+    chunks[chunkIdx]=payload;
+    markChunk(chunkIdx);
     updateStatus();
     if(Object.keys(chunks).length===total)assemble();
   }
@@ -208,7 +220,7 @@ button.secondary{background:#757575}
   }
 
   function resetState(){
-    total=null;mode=null;chunks={};filename=null;
+    total=null;mode=null;chunks={};filename=null;sid=null;
     progressEl.innerHTML='';
     outputEl.innerHTML='';
     statusEl.textContent='QR코드를 카메라에 비춰주세요...';
