@@ -35,6 +35,10 @@ textarea{width:100%;height:120px;box-sizing:border-box}
   </div>
   <div style="font-size:.85em;margin:4px 0;color:#444">
     간격: <input type="range" id="autoMs" min="100" max="3000" step="100" value="1000" oninput="document.getElementById('autoSec').textContent=(this.value/1000).toFixed(1)" style="vertical-align:middle"> <span id="autoSec">1.0</span>초
+    &nbsp;<label><input type="checkbox" id="loopChk"> 반복</label>
+  </div>
+  <div style="font-size:.85em;margin:4px 0;color:#444">
+    페이지 이동: <input type="number" id="goPage" min="1" placeholder="번호" style="width:4em;text-align:center" onkeydown="if(event.key==='Enter')goToPage()"> <button class="btn" onclick="goToPage()">이동</button>
   </div>
   <div style="font-size:.8em;color:#666;margin-top:4px">Space / &#8592; &#8594; 키로 이동</div>
 </div>
@@ -116,6 +120,7 @@ function startAuto(){
   var ms=+(document.getElementById('autoMs').value)||1000;
   autoTimer=setInterval(function(){
     if(idx<chunks.length-1){idx++;show();}
+    else if(document.getElementById('loopChk').checked){idx=0;show();}
     else stopAuto();
   },ms);
   document.getElementById('autoBtn').textContent='⏹ 정지';
@@ -124,6 +129,14 @@ function stopAuto(){
   if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
   var btn=document.getElementById('autoBtn');
   if(btn)btn.textContent='\u25BA\u25BA 자동';
+}
+function goToPage(){
+  var n=parseInt(document.getElementById('goPage').value);
+  if(isNaN(n))return;
+  stopAuto();
+  idx=Math.max(0,Math.min(chunks.length-1,n-1));
+  show();
+  document.getElementById('goPage').value='';
 }
 document.addEventListener('keydown',function(e){
   if(e.code==='ArrowRight'||e.code==='Space'){e.preventDefault();nav(1);}
