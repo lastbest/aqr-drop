@@ -65,7 +65,7 @@ document.getElementById('f').onchange=function(e){
 };
 function warn(sz){
   var w=document.getElementById('warn');
-  if(sz>100000)w.textContent='※ 파일이 큽니다 ('+Math.round(sz/1024)+'KB). QR 개수: '+Math.ceil(sz*4/3/838)+'개 예상';
+  if(sz>100000)w.textContent='※ 파일이 큽니다 ('+Math.round(sz/1024)+'KB). QR 개수: '+Math.ceil(sz*4/3/2886)+'개 예상';
   else w.textContent='';
 }
 function go(){
@@ -75,19 +75,18 @@ function go(){
   build(t,'T');
 }
 function build(data,mode){
-  var MAX=850,total=Math.max(1,Math.ceil(data.length/(MAX-12))),ok=false;
-  while(!ok){
-    ok=true;
-    var pos=0;
-    chunks=[];
-    for(var j=0;j<total;j++){
-      var pfx='QR:'+(j+1)+'/'+total+':'+mode+':';
-      var pay=data.substr(pos,MAX-pfx.length);
-      chunks.push(pfx+pay);
-      pos+=pay.length;
+  var MAX=2900,enc=new TextEncoder(),raw=[],pos=0;
+  while(pos<data.length){
+    var hi=Math.min(data.length-pos,MAX),lo=1;
+    if(enc.encode(data.substr(pos,hi)).length<=MAX-14){
+      raw.push(data.substr(pos,hi));pos+=hi;
+    }else{
+      while(lo<hi){var m=(lo+hi+1)>>1;enc.encode(data.substr(pos,m)).length<=MAX-14?lo=m:hi=m-1;}
+      raw.push(data.substr(pos,lo));pos+=lo;
     }
-    if(pos<data.length){total++;ok=false;}
   }
+  var total=raw.length;
+  chunks=raw.map(function(p,i){return 'QR:'+(i+1)+'/'+total+':'+mode+':'+p;});
   idx=0;
   document.getElementById('view').style.display='block';
   show();
