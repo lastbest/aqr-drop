@@ -12,7 +12,7 @@ button{padding:8px 18px;font-size:1em;cursor:pointer;border:none;border-radius:4
 button:hover{background:#1565c0}
 button.secondary{background:#757575}
 #scan-area{display:none}
-#video{width:100%;max-width:400px;border-radius:6px;background:#000}
+#video{width:100%;max-width:240px;border-radius:6px;background:#000;display:block;margin:0 auto}
 #status{font-size:1.1em;font-weight:bold;margin:10px 0;padding:8px 12px;background:#fff;border-radius:4px;border-left:4px solid #1976d2}
 #status.complete{border-left-color:#43a047}
 #progress{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}
@@ -56,7 +56,7 @@ button.secondary{background:#757575}
 </script>
 <script>
 (function(){
-  var total=null,mode=null,chunks={},scanning=false,lastScan=0;
+  var total=null,mode=null,chunks={},filename=null,scanning=false,lastScan=0;
   var video=document.getElementById('video');
   var canvas=document.getElementById('canvas');
   var ctx=canvas.getContext('2d');
@@ -101,12 +101,16 @@ button.secondary{background:#757575}
   }
 
   function handleCode(raw){
-    var m=raw.match(/^QR:(\d+)\/(\d+):([TB])([\s\S]*)$/);
+    var m=raw.match(/^QR:(\d+)\/(\d+):([TFB])([\s\S]*)$/);
     if(!m)return;
-    // support both QR:1/3:T:data and QR:1/3:T data (colon or nothing after mode)
     var idx=parseInt(m[1]),tot=parseInt(m[2]),md=m[3],data=m[4];
     // strip leading colon if present
     if(data.charAt(0)===':')data=data.slice(1);
+    // extract filename from chunk 1 of F mode
+    if(md==='F'&&idx===1){
+      var sep=data.indexOf(':');
+      if(sep!==-1){filename=data.slice(0,sep);data=data.slice(sep+1);}
+    }
 
     if(total===null){
       total=tot;mode=md;
@@ -162,8 +166,8 @@ button.secondary{background:#757575}
         var url=URL.createObjectURL(blob);
         var h3=document.createElement('h3');h3.textContent='파일 수신 완료';
         var a=document.createElement('a');
-        a.href=url;a.download='received-file';
-        a.textContent='파일 다운로드';a.className='dl-btn';
+        a.href=url;a.download=filename||'received-file';
+        a.textContent='파일 다운로드'+(filename?' ('+filename+')':'');a.className='dl-btn';
         var info=document.createElement('p');
         info.textContent='크기: '+bytes.length+' bytes';
         outputEl.appendChild(h3);outputEl.appendChild(a);outputEl.appendChild(info);
@@ -172,7 +176,7 @@ button.secondary{background:#757575}
   }
 
   function resetState(){
-    total=null;mode=null;chunks={};
+    total=null;mode=null;chunks={};filename=null;
     progressEl.innerHTML='';
     outputEl.innerHTML='';
     statusEl.textContent='QR코드를 카메라에 비춰주세요...';

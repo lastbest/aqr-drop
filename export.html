@@ -46,22 +46,14 @@ var chunks=[],idx=0;
 document.getElementById('f').onchange=function(e){
   var file=e.target.files[0];
   if(!file)return;
-  var txt=/\.(txt|js|ts|jsx|tsx|py|java|c|cpp|h|css|html|htm|json|xml|md|csv|log|sh|rb|go|rs|php|sql)$/i.test(file.name);
-  if(txt){
-    var r=new FileReader();
-    r.onload=function(ev){document.getElementById('t').value=ev.target.result;};
-    r.readAsText(file);
-  }else{
-    var r=new FileReader();
-    r.onload=function(ev){
-      var a=new Uint8Array(ev.target.result),b='';
-      for(var i=0;i<a.length;i+=8192)b+=String.fromCharCode.apply(null,a.subarray(i,i+8192));
-      var b64=btoa(b);
-      warn(file.size);
-      build(b64,'B');
-    };
-    r.readAsArrayBuffer(file);
-  }
+  var r=new FileReader();
+  r.onload=function(ev){
+    var a=new Uint8Array(ev.target.result),b='';
+    for(var i=0;i<a.length;i+=8192)b+=String.fromCharCode.apply(null,a.subarray(i,i+8192));
+    warn(file.size);
+    build(btoa(b),'F',file.name);
+  };
+  r.readAsArrayBuffer(file);
 };
 function warn(sz){
   var w=document.getElementById('warn');
@@ -74,19 +66,23 @@ function go(){
   document.getElementById('warn').textContent='';
   build(t,'T');
 }
-function build(data,mode){
+function build(data,mode,filename){
   var MAX=1200,enc=new TextEncoder(),raw=[],pos=0;
   while(pos<data.length){
+    var fnExtra=(mode==='F'&&raw.length===0)?(filename.length+1):0;
     var hi=Math.min(data.length-pos,MAX),lo=1;
-    if(enc.encode(data.substr(pos,hi)).length<=MAX-14){
+    if(enc.encode(data.substr(pos,hi)).length<=MAX-14-fnExtra){
       raw.push(data.substr(pos,hi));pos+=hi;
     }else{
-      while(lo<hi){var m=(lo+hi+1)>>1;enc.encode(data.substr(pos,m)).length<=MAX-14?lo=m:hi=m-1;}
+      while(lo<hi){var m=(lo+hi+1)>>1;enc.encode(data.substr(pos,m)).length<=MAX-14-fnExtra?lo=m:hi=m-1;}
       raw.push(data.substr(pos,lo));pos+=lo;
     }
   }
   var total=raw.length;
-  chunks=raw.map(function(p,i){return 'QR:'+(i+1)+'/'+total+':'+mode+':'+p;});
+  chunks=raw.map(function(p,i){
+    if(mode==='F'&&i===0)return 'QR:1/'+total+':F:'+filename+':'+p;
+    return 'QR:'+(i+1)+'/'+total+':'+mode+':'+p;
+  });
   idx=0;
   document.getElementById('view').style.display='block';
   show();
