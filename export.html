@@ -56,8 +56,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 </script>
 <script>
 var chunks=[],imgs=[],idx=0,autoTimer=null,genId=0;
-document.getElementById('f').onchange=function(e){
-  var file=e.target.files[0];
+function handleFile(file){
   if(!file)return;
   var r=new FileReader();
   r.onload=function(ev){
@@ -67,7 +66,10 @@ document.getElementById('f').onchange=function(e){
     build(btoa(b),'F',file.name);
   };
   r.readAsArrayBuffer(file);
-};
+}
+document.getElementById('f').onchange=function(e){handleFile(e.target.files[0]);};
+document.body.addEventListener('dragover',function(e){e.preventDefault();});
+document.body.addEventListener('drop',function(e){e.preventDefault();handleFile(e.dataTransfer.files[0]);});
 function warn(sz){
   var w=document.getElementById('warn');
   if(sz>100000)w.textContent='※ 파일이 큽니다 ('+Math.round(sz/1024)+'KB). QR 개수: '+Math.ceil(sz*4/3/2886)+'개 예상';
