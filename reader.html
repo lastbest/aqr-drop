@@ -299,9 +299,10 @@ button.secondary{background:#757575}
     sharePeer=new Peer();
     var recv={};
     sharePeer.on('open',function(){
-      var conn=sharePeer.connect(code,{reliable:true});
+      var conn=sharePeer.connect(code,{reliable:true,serialization:'json'});
       conn.on('open',function(){st.textContent='연결됨! 수신 대기 중...';});
-      conn.on('data',function(msg){
+      conn.on('data',function(raw){
+        var msg=typeof raw==='string'?JSON.parse(raw):raw;
         if(msg.t==='header'){
           recv={mode:msg.mode,n:msg.n,total:msg.total,chunks:{},count:0};
           st.textContent='수신 중... 0 / '+msg.total;
