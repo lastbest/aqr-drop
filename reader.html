@@ -253,6 +253,8 @@ button.secondary{background:#757575}
     errorEl.textContent=msg;errorEl.style.display='block';
   }
 
+  var CHUNK=15000; // 15KB per chunk — safely under DataChannel buffer limits
+
   function startShare(){
     if(sharePeer)sharePeer.destroy();
     var id=Math.random().toString(36).slice(2,7).toUpperCase();
@@ -263,10 +265,25 @@ button.secondary{background:#757575}
       el.innerHTML='공유 코드: <strong style="font-size:1.8em;letter-spacing:5px;color:#1976d2">'+pid+'</strong><br><small style="color:#777">상대방이 이 코드를 입력하면 파일이 전송됩니다</small>';
     });
     sharePeer.on('connection',function(conn){
-      el.innerHTML=el.innerHTML+'<br>연결됨! 전송 중...';
+      var progEl=document.createElement('span');
+      progEl.textContent=' 연결됨!';
+      el.appendChild(document.createElement('br'));
+      el.appendChild(progEl);
       conn.on('open',function(){
-        conn.send(shareText!==null?{t:'T',d:shareText}:{t:'F',n:shareFilename,d:sharePayload});
-        el.innerHTML=el.innerHTML.replace('전송 중...','전송 완료!');
+        var data=shareText!==null?shareText:sharePayload;
+        var isText=shareText!==null;
+        var total=Math.ceil(data.length/CHUNK);
+        conn.send({t:'header',mode:isText?'T':'F',n:shareFilename,total:total});
+        var i=0;
+        function sendNext(){
+          if(i>=total){progEl.textContent=' 전송 완료! ('+total+'청크)';return;}
+          conn.send({t:'chunk',i:i,d:data.slice(i*CHUNK,(i+1)*CHUNK)});
+          progEl.textContent=' 전송 중... '+(i+1)+' / '+total;
+          i++;
+          var dc=conn.dataChannel;
+          setTimeout(sendNext,dc&&dc.bufferedAmount>512*1024?50:0);
+        }
+        sendNext();
       });
     });
     sharePeer.on('error',function(e){el.textContent='오류: '+e.type;});
@@ -280,24 +297,37 @@ button.secondary{background:#757575}
     st.textContent='연결 중...';
     if(sharePeer)sharePeer.destroy();
     sharePeer=new Peer();
+    var recv={};
     sharePeer.on('open',function(){
       var conn=sharePeer.connect(code,{reliable:true});
       conn.on('open',function(){st.textContent='연결됨! 수신 대기 중...';});
       conn.on('data',function(msg){
-        if(msg.t==='T'){
-          var pre=document.createElement('pre');
-          pre.style.cssText='white-space:pre-wrap;word-break:break-all;background:#fff;padding:8px;border-radius:4px;margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-size:.9em';
-          pre.textContent=msg.d;
-          st.innerHTML='<strong>텍스트 수신 완료</strong>';st.appendChild(pre);
-        }else if(msg.t==='F'){
-          var bin=atob(msg.d),bytes=new Uint8Array(bin.length);
-          for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-          var url=URL.createObjectURL(new Blob([bytes]));
-          var a=document.createElement('a');
-          a.href=url;a.download=msg.n||'received-file';a.className='dl-btn';
-          a.style.display='block';a.style.marginTop='8px';
-          a.textContent='파일 다운로드 ('+(msg.n||'received-file')+')';
-          st.innerHTML='<strong>파일 수신 완료!</strong>';st.appendChild(a);
+        if(msg.t==='header'){
+          recv={mode:msg.mode,n:msg.n,total:msg.total,chunks:{},count:0};
+          st.textContent='수신 중... 0 / '+msg.total;
+        }else if(msg.t==='chunk'&&recv.total){
+          recv.chunks[msg.i]=msg.d;
+          recv.count++;
+          st.textContent='수신 중... '+recv.count+' / '+recv.total;
+          if(recv.count===recv.total){
+            var data='';
+            for(var j=0;j<recv.total;j++)data+=recv.chunks[j];
+            if(recv.mode==='T'){
+              var pre=document.createElement('pre');
+              pre.style.cssText='white-space:pre-wrap;word-break:break-all;background:#fff;padding:8px;border-radius:4px;margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-size:.9em';
+              pre.textContent=data;
+              st.innerHTML='<strong>텍스트 수신 완료</strong>';st.appendChild(pre);
+            }else{
+              var bin=atob(data),bytes=new Uint8Array(bin.length);
+              for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+              var url=URL.createObjectURL(new Blob([bytes]));
+              var a=document.createElement('a');
+              a.href=url;a.download=recv.n||'received-file';a.className='dl-btn';
+              a.style.display='block';a.style.marginTop='8px';
+              a.textContent='파일 다운로드 ('+(recv.n||'received-file')+')';
+              st.innerHTML='<strong>파일 수신 완료!</strong>';st.appendChild(a);
+            }
+          }
         }
       });
       conn.on('error',function(e){st.textContent='오류: '+e.type;});
