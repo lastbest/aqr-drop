@@ -19,6 +19,7 @@ button.secondary{background:#757575}
 .chunk-row{display:flex;gap:3px;margin-bottom:3px}
 .chunk-row.done{margin-bottom:1px}
 .chunk-row.done .chunk{display:none}
+  .chunk-row.merged{display:none}
 .chunk-row.done::before{content:attr(data-range)' ✓';display:block;width:100%;font-size:.75em;color:#fff;background:#43a047;border-radius:4px;padding:1px 8px;box-sizing:border-box}
 .chunk{width:30px;height:30px;line-height:30px;text-align:center;border-radius:4px;background:#e0e0e0;font-size:.78em;color:#555;font-weight:bold;flex-shrink:0}
 .chunk.done{background:#43a047;color:#fff}
@@ -183,11 +184,34 @@ button.secondary{background:#757575}
   function markChunk(i){
     var el=document.getElementById('ck'+i);
     if(el)el.className='chunk done';
-    var rowNum=Math.ceil(i/10);
-    var start=(rowNum-1)*10+1,end=Math.min(rowNum*10,total);
-    for(var k=start;k<=end;k++){if(chunks[k]===undefined)return;}
-    var rowEl=document.getElementById('row'+rowNum);
-    if(rowEl)rowEl.classList.add('done');
+    refreshRows();
+  }
+
+  function refreshRows(){
+    var rowCount=Math.ceil(total/10);
+    var doneRow=[];
+    for(var r=1;r<=rowCount;r++){
+      var start=(r-1)*10+1,end=Math.min(r*10,total),allDone=true;
+      for(var k=start;k<=end;k++){if(chunks[k]===undefined){allDone=false;break;}}
+      doneRow[r]=allDone;
+    }
+    var r=1;
+    while(r<=rowCount){
+      var rowEl=document.getElementById('row'+r);
+      if(doneRow[r]){
+        var runEnd=r;
+        while(runEnd+1<=rowCount&&doneRow[runEnd+1])runEnd++;
+        rowEl.classList.add('done');
+        rowEl.classList.remove('merged');
+        rowEl.setAttribute('data-range',((r-1)*10+1)+'-'+Math.min(runEnd*10,total));
+        for(var x=r+1;x<=runEnd;x++)document.getElementById('row'+x).classList.add('merged');
+        r=runEnd+1;
+      }else{
+        rowEl.classList.remove('done');
+        rowEl.classList.remove('merged');
+        r++;
+      }
+    }
   }
 
   function updateStatus(){
