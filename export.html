@@ -56,14 +56,21 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 </script>
 <script>
 var chunks=[],imgs=[],idx=0,autoTimer=null,genId=0;
+// Turn any string/array of bytes into a "byte string" (1 char = 1 byte, 0-255).
+function bytesToStr(a){
+  var b='';
+  for(var i=0;i<a.length;i+=8192)b+=String.fromCharCode.apply(null,a.subarray?a.subarray(i,i+8192):a.slice(i,i+8192));
+  return b;
+}
+// UTF-8 encode a JS string into a byte string (preserves Korean etc.).
+function utf8Bytes(s){return bytesToStr(new TextEncoder().encode(s));}
 function handleFile(file){
   if(!file)return;
   var r=new FileReader();
   r.onload=function(ev){
-    var a=new Uint8Array(ev.target.result),b='';
-    for(var i=0;i<a.length;i+=8192)b+=String.fromCharCode.apply(null,a.subarray(i,i+8192));
     warn(file.size);
-    build(btoa(b),'F',file.name);
+    // raw file bytes, carried verbatim (no base64)
+    build(bytesToStr(new Uint8Array(ev.target.result)),'F',file.name);
   };
   r.readAsArrayBuffer(file);
 }
@@ -72,30 +79,24 @@ document.body.addEventListener('dragover',function(e){e.preventDefault();});
 document.body.addEventListener('drop',function(e){e.preventDefault();handleFile(e.dataTransfer.files[0]);});
 function warn(sz){
   var w=document.getElementById('warn');
-  if(sz>100000)w.textContent='※ 파일이 큽니다 ('+Math.round(sz/1024)+'KB). QR 개수: '+Math.ceil(sz*4/3/2886)+'개 예상';
+  var per=(+(document.getElementById('maxBytes').value)||1200)-20;
+  if(sz>100000)w.textContent='※ 파일이 큽니다 ('+Math.round(sz/1024)+'KB). QR 개수: '+Math.ceil(sz/per)+'개 예상';
   else w.textContent='';
 }
 function go(){
   var t=document.getElementById('t').value;
   if(!t){alert('텍스트를 입력하거나 파일을 업로드하세요.');return;}
   document.getElementById('warn').textContent='';
-  build(t,'T');
+  build(utf8Bytes(t),'T');
 }
 function build(data,mode,filename){
-  var MAX=+(document.getElementById('maxBytes').value)||1200,enc=new TextEncoder(),raw=[],pos=0;
-  while(pos<data.length){
-    var hi=Math.min(data.length-pos,MAX),lo=1;
-    if(enc.encode(data.substr(pos,hi)).length<=MAX-20){
-      raw.push(data.substr(pos,hi));pos+=hi;
-    }else{
-      while(lo<hi){var m=(lo+hi+1)>>1;enc.encode(data.substr(pos,m)).length<=MAX-20?lo=m:hi=m-1;}
-      raw.push(data.substr(pos,lo));pos+=lo;
-    }
-  }
+  // data is a byte string (1 char = 1 byte): UTF-8 bytes for text, raw bytes for files.
+  var MAX=+(document.getElementById('maxBytes').value)||1200,SZ=MAX-20,raw=[],pos=0;
+  while(pos<data.length){raw.push(data.substr(pos,SZ));pos+=SZ;}
   var total=raw.length;
   var sid=Math.random().toString(36).slice(2,6).toUpperCase();
   chunks=raw.map(function(p,i){return 'QR:'+(i+1)+'/'+total+':'+mode+':'+sid+':'+p;});
-  chunks.unshift('QR:0/'+total+':M:'+sid+':'+mode+':'+(mode==='F'?filename:'-'));
+  chunks.unshift('QR:0/'+total+':M:'+sid+':'+mode+':'+(mode==='F'?utf8Bytes(filename):'-'));
   if(document.getElementById('passChk').checked){
     var passes=Math.max(2,+(document.getElementById('passN').value)||2);
     var dc=chunks.slice(1);
@@ -110,7 +111,7 @@ function build(data,mode,filename){
   progEl.style.display='block';
   viewEl.style.display='none';
   var myId=++genId,j=0;
-  qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
+  qrcode.stringToBytes=qrcode.stringToBytesFuncs['default'];
   (function step(){
     if(genId!==myId)return;
     var end=Math.min(j+10,chunks.length);
